@@ -18,12 +18,16 @@ package com.example;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+
+import org.apache.tomcat.util.http.parser.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.sql.DataSource;
@@ -47,11 +51,62 @@ public class Main {
   public static void main(String[] args) throws Exception {
     SpringApplication.run(Main.class, args);
   }
+  
+  public String handleRectangleSubmit(Rectangle rectangle)throws Exception{
+    try (Connection connection = dataSource.getConnection()) {
+      Statement stmt = connection.createStatement();
+      stmt.executeUpdate("CREATE TABLE IF NOT EXISTS rectangle (id serial, name varchar(20), color varchar(20), width smallint, height smallint");
+      String sql = "INSERT INTO rectangle (color,width,height) VALUES ('" + rectangle.getName() + "," + rectangle.getColor() + "','" + rectangle.getWidth() + "','" + rectangle.getHeight() + "')";
+      stmt.executeUpdate(sql);
+      System.out.println(rectangle.getName() + " " +rectangle.getColor() + " " + rectangle.getWidth() + " " + rectangle.getHeight()); // print rectangle on console
+      return "redirect:/rectangle/success";
+    } catch (Exception e) {
+      // model.put("message",e.getMessage());
+      return "error";
+    }
+  }
+
+  @GetMapping("/rectangle/success")
+  public String getRectangleSuccess(Map<String, Object> model){
+    try (Connection connection = dataSource.getConnection()) {
+      Statement stmt = connection.createStatement();
+      ResultSet rs = stmt.executeQuery("SELECT * FROM rectangle");
+
+      ArrayList<String> output = new ArrayList<String>();
+      while (rs.next()) {
+        String name = rs.getString("name");
+        String color = rs.getString("color");
+        String id = rs.getString("id");
+        
+        output.add(id + "," + name + "," + color);
+      }
+
+      model.put("records", output);
+      return "success";
+    } catch (Exception e) {
+      model.put("message", e.getMessage());
+      return "error";
+    }
+    
+  }
+
+  // @GetMapping("/rectangle/display/{rid}")
+  // public String getSpecificRectangle(Map<String, Object> model, @PathVariable String rid){ 
+  //   System.out.println(rid);
+  //   // 
+  //   // query DB : SELECT * FROM people WHERE id={pid}
+  //   model.put("id", rid);
+  //   return "readrectangle";
+
+
+  // }
+
 
   @RequestMapping("/")
   String index() {
     return "index";
   }
+  @GetMapping(path = "/Rectangle")
 
   @RequestMapping("/db")
   String db(Map<String, Object> model) {
@@ -74,6 +129,7 @@ public class Main {
     }
   }
 
+  
   @Bean
   public DataSource dataSource() throws SQLException {
     if (dbUrl == null || dbUrl.isEmpty()) {
